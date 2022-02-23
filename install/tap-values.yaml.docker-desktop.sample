@@ -1,0 +1,46 @@
+profile: light
+ceip_policy_disclosed: true # Installation fails if this is set to 'false'
+
+buildservice:
+  kp_default_repository: "$CONTAINER_REGISTRY_HOSTNAME/$HARBOR_PROJECT/build-service"
+  kp_default_repository_username: "$CONTAINER_REGISTRY_USERNAME"
+  kp_default_repository_password: "$CONTAINER_REGISTRY_PASSWORD"
+  tanzunet_username: "$TANZUNET_USERNAME"
+  tanzunet_password: "$TANZUNET_PASSWORD"
+
+supply_chain: basic
+
+ootb_supply_chain_basic:
+  registry:
+    server: "$CONTAINER_REGISTRY_HOSTNAME"
+    repository: "$HARBOR_PROJECT/supply-chain"
+  gitops:
+    ssh_secret: ""
+
+tap_gui:
+  service_type: ClusterIP
+  ingressEnabled: "true"
+  ingressDomain: "$INGRESS_DOMAIN"
+  app_config:
+    app:
+      baseUrl: "http://tap-gui.$INGRESS_DOMAIN"
+    catalog:
+      locations:
+        - type: url
+          target: "$CATALOG_GUI_GIT_URL"
+    backend:
+      baseUrl: "http://tap-gui.$INGRESS_DOMAIN"
+      cors:
+        origin: "http://tap-gui.$INGRESS_DOMAIN"
+
+cnrs:
+  provider: local
+  domain_name: "$INGRESS_DOMAIN"
+
+metadata_store:
+  app_service_type: NodePort
+
+contour:
+  envoy:
+    service:
+      type: LoadBalancer

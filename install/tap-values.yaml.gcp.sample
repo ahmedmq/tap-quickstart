@@ -1,0 +1,51 @@
+profile: full
+ceip_policy_disclosed: true
+buildservice:
+  kp_default_repository: "$CONTAINER_REGISTRY_HOSTNAME/$GCP_PROJECT/build-service"
+  kp_default_repository_username: "_json_key"
+  kp_default_repository_password: >
+    "$GCP_JSON_KEY_CONTENTS"
+  tanzunet_username: "$TANZUNET_USERNAME"
+  tanzunet_password: "$TANZUNET_PASSWORD"
+  descriptor_name: "tap-1.0.0-full"
+  enable_automatic_dependency_updates: true
+supply_chain: basic
+
+ootb_supply_chain_basic:
+  registry:
+    server: "$CONTAINER_REGISTRY_HOSTNAME"
+    repository: "$GCP_PROJECT/supply-chain"
+  gitops:
+    ssh_secret: ""
+
+learningcenter:
+  ingressDomain: "tlc.$INGRESS_DOMAIN"
+
+tap_gui:
+  service_type: ClusterIP
+  ingressEnabled: "true"
+  ingressDomain: "$INGRESS_DOMAIN"
+  app_config:
+    app:
+      baseUrl: http://tap-gui.$INGRESS_DOMAIN
+    catalog:
+      locations:
+        - type: url
+          target: "$CATALOG_GUI_GIT_URL"
+    backend:
+      baseUrl: http://tap-gui.$INGRESS_DOMAIN
+      cors:
+        origin: http://tap-gui.$INGRESS_DOMAIN
+
+grype:
+  namespace: "tap-install"
+  targetImagePullSecret: "tap-registry"
+
+contour:
+  envoy:
+    service:
+      type: LoadBalancer
+
+cnrs:
+  domain_name: cnr.$INGRESS_DOMAIN
+  domain_template: "{{.Name}}-{{.Namespace}}.{{.Domain}}"
