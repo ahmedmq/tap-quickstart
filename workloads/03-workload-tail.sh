@@ -8,7 +8,6 @@ set -o allexport; source "$SCRIPT_DIR"/../.env; set +o allexport
 
 WORKLOAD_NAME=${1:-$DEFAULT_WORKLOAD_NAME}
 
-
 set -x
 tanzu apps workload tail "$WORKLOAD_NAME"\
   --since 10m \

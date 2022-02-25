@@ -2,9 +2,9 @@
 
 #### Gotchas 
 
-- Installing TAP on Docker Desktop requires sufficient resources in CPU and memory. These installation scripts have been tested on Docker resources with 8 cpus and 12 GB of RAM.
+- Installing TAP on Docker Desktop requires sufficient resources in CPU and memory. These installation scripts have been tested on Docker resources with 8 cpus and 16 GB of RAM.
 - Installation process may be slow on Docker Desktop due to limited resources and enough time must be given to complete the installation( sometimes 10 minutes or more ). Have noticed that if there are too many applications running along with Docker then the installation is very, very slow and times out
-- The container registry used for installation on Docker Desktop is Harbor. Docker Hub registry throttles API requests which causes the installation to timeout.
+- The container registry used for installation on Docker Desktop is Harbor. 
 
 #### Prerequisites
 
@@ -22,11 +22,12 @@ For Docker Desktop:
 For GCP:
   - Google Cloud Account
   - `gcloud` CLI installed and configured with project/region Refer to instructions [here](https://cloud.google.com/sdk/docs/install)
+  - Create a service account in Google Cloud IAM with permission for GKE clusters, compute instance,Container registry(admin privileges for these resources). Create a key file for this service account and download it to the local system. 
   - The script creates a jump host on GCP, from where the installation is done on the GKE cluster
 
 ## Installing TAP
 
-### Supplying installation configuration
+### Pre-Install
 
 - Create an environment configuration file with the name`.env` at the root of the project folder using the template file `env.sample`. 
 
@@ -36,31 +37,49 @@ For GCP:
 
 - Edit the configuration file and provide all required values. Description of each variable is provided below:
 
-| Key                         | Description                                                                                                                                                                                                                                                                                |
-|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| PIVNET_API_TOKEN            | API token to access the Tanzu Network account. Refer to pre-requisite section above on how to generate an API token                                                                                                                                                                        |
-| TANZUNET_REGISTRY           | Static text - `registry.tanzu.vmware.com`                                                                                                                                                                                                                                                  |
-| TANZUNET_USERNAME           | User name to access Tanzu Network. Refer to pre-requisite section above on how to create a Tanzu Net account                                                                                                                                                                               |
-| TANZUNET_PASSWORD           | Password to access Tanzu Network                                                                                                                                                                                                                                                           |
-| CONTAINER_REGISTRY_HOSTNAME | Container registry to host the Tanzu Build Service dependencies, supply chain artefacts and workload images . Must have write access and space of 10GB                                                                                                                                     |
-| CONTAINER_REGISTRY_USERNAME | Username for the `CONTAINER_REGISTRY_HOSTNAME` container repository provided above. Note if you are using robot account for Harbor repository, it should be enclosed in single quotes to avoid unnecessary command substitution. For e.g. `CONTAINER_REGISTRY_USERNAME='robot$demo+admin'` |
-| CONTAINER_REGISTRY_PASSWORD | Password for the `CONTAINER_REGISTRY_HOSTNAME` container repository provided above                                                                                                                                                                                                         |
-| HARBOR_PROJECT              | Name of the harbor project                                                                                                                                                                                                                                                                 |
-| CATALOG_GUI_GIT_URL         | Path to the `catalog-info.yaml` catalog definition file. For e.g. If the catalog is hosted on Github, then the path will be the full URL of the `catalog-info.yaml` file as `https://github.com/<git_user>/<git_repo>/blob/main/catalog-info.yaml`                                         |
-| INGRESS_DOMAIN              | Subdomain of your choice that is the value of the same name passed to the `tap-gui` package. via the `tap-values.yaml`. The domain name for e.g. tap-gui.<ingress_domain> points to the `envoy` service in the `tanzu-system-ingress` namespace of the cluster where TAP is installed      |
-| DEVELOPER_NAMESPACE         | Kubernetes namespace which holds all resources for workload per developer                                                                                                                                                                                                                  |
-| DEFAULT_WORKLOAD_NAME       | Default workload name used if not specified when creating workloads on TAP. Default value `sample-app`                                                                                                                                                                                     |
+| Key                         | Description                                                                                                                                                                                                                                                                                                                                                  |
+|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| K8_CLUSTER                  | Target K8 Cluster where TAP will be installed. Must be either `docker-desktop` or `gke`                                                                                                                                                                                                                                                                      |
+| PIVNET_API_TOKEN            | API token to access the Tanzu Network account. Refer to pre-requisite section above on how to generate an API token                                                                                                                                                                                                                                          |
+| TANZUNET_REGISTRY           | Static text - `registry.tanzu.vmware.com`                                                                                                                                                                                                                                                                                                                    |
+| TANZUNET_USERNAME           | User name to access Tanzu Network. Refer to pre-requisite section above on how to create a Tanzu Net account                                                                                                                                                                                                                                                 |
+| TANZUNET_PASSWORD           | Password to access Tanzu Network                                                                                                                                                                                                                                                                                                                             |
+| CONTAINER_REGISTRY_HOSTNAME | Container registry to host the Tanzu Build Service dependencies, supply chain artefacts and workload images . Must have write access and space of 10GB.                                                                                                                                                                                                      |
+| CONTAINER_REGISTRY_USERNAME | Username for the `CONTAINER_REGISTRY_HOSTNAME` container repository provided above. Note if you are using robot account for Harbor repository, it should be enclosed in single quotes to avoid unnecessary command substitution. For e.g. `CONTAINER_REGISTRY_USERNAME='robot$demo+admin'`. For Google cloud this is always `_json_key`                      |
+| CONTAINER_REGISTRY_PASSWORD | Password for the `CONTAINER_REGISTRY_HOSTNAME` container repository provided above. For GKE this is the path to the Google Cloud JSON credentials file                                                                                                                                                                                                       |
+| CONTAINER_REPOSITORY        | Name of the repository in the `CONTAINER_REGISTRY_HOSTNAME`. For Harbor and Google Cloud, this is the project name                                                                                                                                                                                                                                           |
+| CATALOG_GUI_GIT_URL         | Path to the `catalog-info.yaml` catalog definition file. For e.g. If the catalog is hosted on Github, then the path will be the full URL of the `catalog-info.yaml` file as `https://github.com/<git_user>/<git_repo>/blob/main/catalog-info.yaml`                                                                                                           |
+| INGRESS_DOMAIN              | Subdomain of your choice that is the value of the same name passed to the `tap-gui` package. via the `tap-values.yaml`. To simplify DNS for our local(Docker Desktop) installation , we set our `ingress-domain` to `127-0-0-1.nip.io`. This will automatically route requests to localhost and does not require any entries to be made to `/etc/hosts` file |
+| DEVELOPER_NAMESPACE         | Kubernetes namespace which holds all resources for workload per developer                                                                                                                                                                                                                                                                                    |
+| DEFAULT_WORKLOAD_NAME       | Default workload name used if not specified when creating workloads on TAP. Default value `sample-app`                                                                                                                                                                                                                                                       |
+| GCP_REGION                  | Google Cloud Region where all GCP resources (GKE,Jump Host) are created                                                                                                                                                                                                                                                                                      |
+| GCP_SERVICE_ACCOUNT_NAME    | Google IAM Service account with privileges for GKE, Compute, Container Registry. The key file associated with this account must be provided in `CONTAINER_REGISTRY_PASSWORD`                                                                                                                                                                                 |
         
+- To be run on GCP only: Setup the Google Cloud environment by creating the GKE cluster and jump host. 
+
+  ```shell
+  ./install/configure-tap-gcp-env.sh
+  ```
+  This will create the GKE cluster with the name `tap-cluster` and a jump host with the name `tap-jump`. 
+  copy over the service account json key to the jump host and then supply it as a path value in the environment file for CONTAINER_REGISTRY_PASSWORD
+  As part of this script, the project files are also copied over to the jump host, from where the scripts can be run directly from the jump host.
+
+- To be run on GCP only: SSH into the GCP jump host by using 
+
+  ```shell
+  gcloud compute ssh tap-jump  
+  ```
+  Navigate to the root of the project after logging into the jump host and run all the commands below from the jump host
 
 ### Step 0 - Configure the install environment
 
 - Run the following command from the root of the project folder to configure the install environment
 
   ```shell
-   ./install/00-configure-install.sh <docker-desktop/gcp>
+   ./install/00-install-tools.sh
   ```
   
-  This script will download the `pivent` CLI if not installed previously and login using the `PIVNET_API_TOKEN` provided in the environment configuration file.
+  This script will download the `pivent` CLI if not installed previously and login using the `PIVNET_API_TOKEN` provided in the environment configuration file. It will also download `jq`, `curl` and `kubectl`
   A sample output is shown below where the `pivnet` CLI has been succesfully authenticated with the provided tanzu net credentials
 
   ```text
@@ -72,10 +91,8 @@ For GCP:
 - Run the following command from the root of the project folder to install Tanzu Cluster Essentials
 
   ```shell
-   ./install/01-install-tanzu-cluster-essentials.sh <docker-desktop/gcp>
+   sudo ./install/01-install-tanzu-cluster-essentials.sh 
   ```
-  
-  The argument provided to the above script is the target platform where TAP is to be installed.
 
   A sample output is shown below where the Tanzu Cluster Essentials is successfully deployed.
 
@@ -96,10 +113,8 @@ For GCP:
 - Run the following command from the root of the project folder to install Tanzu CLI
 
   ```shell
-   ./install/02-install-tanzu-cli.sh <docker-desktop/gcp>
+   sudo ./install/02-install-tanzu-cli.sh 
    ```
-
-  The argument provided to the above script is the target platform where TAP is to be installed.
 
   A sample output is shown below which lists the Tanzu CLI plugins are installed on the platform
 
@@ -140,9 +155,8 @@ For GCP:
 - Install TAP
 
   ```shell
-   ./install/04-install-tap.sh <docker-desktop/gcp>
+   ./install/04-install-tap.sh 
   ```
-   The argument provided to the above script is the target platform where TAP is to be installed.
 
    Note: This may take some time to complete the installation. You will continue to see a message as below when the reconciliation is in progress
 
@@ -355,18 +369,23 @@ This should take a very long time on Docker Desktop due to limited resource capa
 
 ### Step 4 - Test workload 
 
-  - Configure Local DNS using /etc/hosts for Docker Desktop installation
-    
-    Only applicable for Docker Desktop.
-    Edit the `/etc/hosts` file and add an entry for the hostname of the workload shown in the previous step
+  - Configure DNS to route traffic to the envoy load balancer. This needs to be done for GCP only, for Docker-desktop we have configured the `127-0-0-1.nip.io` domain
+
+    Obtain the external IP of the envoy load balancer
 
     ```
-     sudo vi /etc/hosts
+     kubectl get service envoy -n tanzu-system-ingress
     ```
     
     ```text
-    127.0.0.1 sample-app.dev1.tap.ahmedmq.co.in
+    NAME    TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)                      AGE
+    envoy   LoadBalancer   10.24.5.113   34.100.181.55   80:31593/TCP,443:31440/TCP   46m
     ```
+    
+  - Create a wildcard DNS record for the domain you have provided in the environment configuration(INGRESS_DOMAIN). A sample is shown below
+  
+    ![Namecheap Domain Mapping](./dns-mapping.png)
+
 
   - Run command to `curl` to the workload url and check the response
 
@@ -393,7 +412,7 @@ This should take a very long time on Docker Desktop due to limited resource capa
   ```shell
     ./workloads/06-workload-delete.sh
   ```
-  A sample output below shows the successfull deletion of the workload
+  A sample output below shows the workload is successfully deleted
 
   ```text
   + tanzu apps workload delete sample-app --namespace dev1 --yes
@@ -405,11 +424,20 @@ This should take a very long time on Docker Desktop due to limited resource capa
   
 ## Uninstall TAP
 
-- Finally, we can clean up the whole TAP installation by running the following command
+- Finally, we can clean up the whole TAP installation by running the following command. 
+  Note, alternatively the quicker way is deleting the cluster or resetting Kubernetes in Docker desktop and then executing this step. 
   
   ```shell
-    ./install/08-uninstall-all.sh
+    sudo ./install/08-uninstall-all.sh
   ```
 
   This will take a long time to complete, during which it will remove all the TAP packages, repositories
   Tanzu Cluster Essentials, CLI and any temporary directories.
+
+- Delete the jump host . Export the GCP_REGION variable
+
+  ```shell
+  GCP_REGION=<<<value>>>
+  CLUSTER_ZONE="$GCP_REGION-a"
+  gcloud compute instances delete tap-jump -q --zone="$CLUSTER_ZONE"
+  ```

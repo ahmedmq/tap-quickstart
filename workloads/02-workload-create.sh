@@ -10,7 +10,7 @@ WORKLOAD_NAME=${1:-$DEFAULT_WORKLOAD_NAME}
 
 set -x
 tanzu apps workload create "$WORKLOAD_NAME" \
-  --git-repo https://github.com/sample-accelerators/tanzu-java-web-app \
+  --git-repo https://github.com/ahmedmq/tanzu-java-web-app \
   --git-branch main \
   --type web \
   --label app.kubernetes.io/part-of="$WORKLOAD_NAME" \

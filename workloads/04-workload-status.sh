@@ -8,7 +8,6 @@ set -o allexport; source "$SCRIPT_DIR"/../.env; set +o allexport
 
 WORKLOAD_NAME=${1:-$DEFAULT_WORKLOAD_NAME}
 
-
 set -x
 tanzu apps workload get "$WORKLOAD_NAME" \
   --namespace "$DEVELOPER_NAMESPACE"

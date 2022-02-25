@@ -8,10 +8,14 @@ set -o allexport; source "$SCRIPT_DIR"/../.env; set +o allexport
 
 TEMP_DIR=$(mktemp -d)
 
-case "${1:-docker-desktop}" in
+case "$K8_CLUSTER" in
   docker-desktop) PRODUCT_ID=1105820; ARCHIVE_NAME="tanzu-cluster-essentials-darwin-amd64-1.0.0.tgz" ;;
-  gcp) PRODUCT_ID=1105818; ARCHIVE_NAME="tanzu-cluster-essentials-linux-amd64-1.0.0.tgz";;
+  gke) PRODUCT_ID=1105818; ARCHIVE_NAME="tanzu-cluster-essentials-linux-amd64-1.0.0.tgz";;
+  *) echo "Error: Unknown value for K8_CLUSTER: $K8_CLUSTER, exiting." 1>&2 && exit 1
 esac
+
+! command -v pivnet >/dev/null && echo "pivnet not installed, exiting." 1>&2 && exit 1
+! command -v jq >/dev/null && echo "jq not installed, exiting." 1>&2 && exit 1
 
 pivnet download-product-files \
   --product-slug='tanzu-cluster-essentials' \
